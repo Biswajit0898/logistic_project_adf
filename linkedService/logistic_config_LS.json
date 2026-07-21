@@ -1,0 +1,23 @@
+{
+	"name": "logistic_config_LS",
+	"properties": {
+		"annotations": [],
+		"type": "AzureSqlDatabase",
+		"typeProperties": {
+			"server": "logistic-project-db-server.database.windows.net",
+			"database": "logistic_project_2026_db",
+			"encrypt": "mandatory",
+			"trustServerCertificate": true,
+			"authenticationType": "SQL",
+			"userName": "biswa",
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "logistic_project_key_vault_LS",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "clientdbpassword"
+			}
+		}
+	}
+}

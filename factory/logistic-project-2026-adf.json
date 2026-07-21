@@ -1,0 +1,15 @@
+{
+	"name": "logistic-project-2026-adf",
+	"properties": {
+		"trustModeClaimForMi": {
+			"value": "Disabled",
+			"editable": true
+		}
+	},
+	"location": "westus2",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "696e13e7-6752-4e03-ae5b-2219b2e51b2a",
+		"tenantId": "dd6e396a-c0aa-42c0-97e7-b2d798dfd688"
+	}
+}
