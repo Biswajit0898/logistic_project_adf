@@ -186,31 +186,39 @@
 		],
 		"parameters": {
 			"is_full_load": {
-				"type": "string"
+				"type": "bool"
 			},
 			"server_name": {
-				"type": "string"
+				"type": "string",
+				"defaultValue": "''"
 			},
 			"database_name": {
-				"type": "string"
+				"type": "string",
+				"defaultValue": "''"
 			},
 			"table_name": {
-				"type": "string"
+				"type": "string",
+				"defaultValue": "''"
 			},
 			"sink_container_name": {
-				"type": "string"
+				"type": "string",
+				"defaultValue": "''"
 			},
 			"sink_path": {
-				"type": "string"
+				"type": "string",
+				"defaultValue": "''"
 			},
 			"load_column_name": {
-				"type": "string"
+				"type": "string",
+				"defaultValue": "''"
 			},
 			"load_column_value": {
-				"type": "string"
+				"type": "string",
+				"defaultValue": "''"
 			},
 			"load_column_datatype": {
-				"type": "string"
+				"type": "string",
+				"defaultValue": "''"
 			}
 		},
 		"annotations": []
