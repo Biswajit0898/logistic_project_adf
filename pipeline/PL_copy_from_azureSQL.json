@@ -34,7 +34,7 @@
 								"source": {
 									"type": "AzureSqlSource",
 									"sqlReaderQuery": {
-										"value": "@concat(\n'SELECT * FROM dbo.',\npipeline().parameters.table_name,\n' WHERE ',\npipeline().parameters.load_column_name,\n' > CAST (SELECT load_identifier_value\n      FROM metadata.ingestion_configuration\n      WHERE target_file_name = ''',\npipeline().parameters.table_name,\n''') AS',pipeline().parameters.load_column_datatype,')'\n)",
+										"value": "@concat(\n'SELECT * FROM dbo.',\npipeline().parameters.table_name,\n' WHERE ',\npipeline().parameters.load_column_name,\n' > CAST (SELECT load_identifier_value\n      FROM metadata.ingestion_configuration\n      WHERE target_file_name = ''',\npipeline().parameters.table_name,\n''') AS ',pipeline().parameters.load_column_datatype,')'\n)",
 										"type": "Expression"
 									},
 									"queryTimeout": "02:00:00",
