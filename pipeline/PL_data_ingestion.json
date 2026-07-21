@@ -1,0 +1,518 @@
+{
+	"name": "PL_data_ingestion",
+	"properties": {
+		"activities": [
+			{
+				"name": "Lookup_ingestion_config_table",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "SELECT * FROM metadata.ingestion_configuration WHERE is_run = 1;",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "DS_ingetion_config_table",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "for_each_record",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Lookup_ingestion_config_table",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Lookup_ingestion_config_table').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Switch_resources",
+							"type": "Switch",
+							"dependsOn": [
+								{
+									"activity": "Set_source_container_name",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Set_source_path",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Set_sink_container_name",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Set_sink_source_path",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "set_full_load",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "set_source_server_name",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "set_source_database_name",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "set_filename",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "set_load_column_name",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "set_load_column_value",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "set_load_column_datatype",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"on": {
+									"value": "@item().source_name",
+									"type": "Expression"
+								},
+								"cases": [
+									{
+										"value": "adls",
+										"activities": [
+											{
+												"name": "Copy_file_from_adls",
+												"type": "Copy",
+												"state": "Inactive",
+												"onInactiveMarkAs": "Succeeded",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [
+													{
+														"name": "Source",
+														"value": "@{variables('source_conatiner_name')}/@{variables('source_path')}/*.csv"
+													},
+													{
+														"name": "Destination",
+														"value": "@{variables('sink_container_name')}/@{variables('sink_path')}/"
+													}
+												],
+												"typeProperties": {
+													"source": {
+														"type": "DelimitedTextSource",
+														"storeSettings": {
+															"type": "AzureBlobFSReadSettings",
+															"recursive": true,
+															"enablePartitionDiscovery": false
+														},
+														"formatSettings": {
+															"type": "DelimitedTextReadSettings"
+														}
+													},
+													"sink": {
+														"type": "DelimitedTextSink",
+														"storeSettings": {
+															"type": "AzureBlobFSWriteSettings"
+														},
+														"formatSettings": {
+															"type": "DelimitedTextWriteSettings",
+															"quoteAllText": true,
+															"fileExtension": ".txt"
+														}
+													},
+													"enableStaging": false,
+													"translator": {
+														"type": "TabularTranslator",
+														"typeConversion": true,
+														"typeConversionSettings": {
+															"allowDataTruncation": true,
+															"treatBooleanAsNumber": false
+														}
+													}
+												},
+												"inputs": [
+													{
+														"referenceName": "DS_source_adls",
+														"type": "DatasetReference",
+														"parameters": {
+															"param_container": {
+																"value": "@variables('source_conatiner_name')",
+																"type": "Expression"
+															},
+															"param_path": {
+																"value": "@variables('source_path')",
+																"type": "Expression"
+															}
+														}
+													}
+												],
+												"outputs": [
+													{
+														"referenceName": "DS_sink_adls",
+														"type": "DatasetReference",
+														"parameters": {
+															"param_container": {
+																"value": "@variables('sink_container_name')",
+																"type": "Expression"
+															},
+															"param_path": {
+																"value": "@variables('sink_path')",
+																"type": "Expression"
+															},
+															"file_name": {
+																"value": "@variables('sink_file_name')",
+																"type": "Expression"
+															}
+														}
+													}
+												]
+											}
+										]
+									},
+									{
+										"value": "sql_db",
+										"activities": [
+											{
+												"name": "Execute_copy_from_azureSQL",
+												"type": "ExecutePipeline",
+												"state": "Inactive",
+												"onInactiveMarkAs": "Succeeded",
+												"dependsOn": [],
+												"policy": {
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "PL_copy_from_azureSQL",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"is_full_load": {
+															"value": "@variables('is_full_load')",
+															"type": "Expression"
+														},
+														"server_name": {
+															"value": "@variables('source_server_name')",
+															"type": "Expression"
+														},
+														"database_name": {
+															"value": "@variables('source_database_name')",
+															"type": "Expression"
+														},
+														"table_name": {
+															"value": "@variables('sink_file_name')",
+															"type": "Expression"
+														},
+														"sink_container_name": {
+															"value": "@variables('sink_container_name')",
+															"type": "Expression"
+														},
+														"sink_path": {
+															"value": "@variables('sink_path')",
+															"type": "Expression"
+														},
+														"load_column_name": {
+															"value": "@variables('load_column_name')",
+															"type": "Expression"
+														},
+														"load_column_value": {
+															"value": "@variables('load_column_value')",
+															"type": "Expression"
+														},
+														"load_column_datatype": {
+															"value": "@variables('load_column_datatype')",
+															"type": "Expression"
+														}
+													}
+												}
+											}
+										]
+									}
+								]
+							}
+						},
+						{
+							"name": "Set_source_container_name",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "source_conatiner_name",
+								"value": {
+									"value": "@item().source_container_name",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set_source_path",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "source_path",
+								"value": {
+									"value": "@item().source_path",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set_sink_container_name",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "sink_container_name",
+								"value": {
+									"value": "@item().target_container_name",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set_sink_source_path",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "sink_path",
+								"value": {
+									"value": "@item().target_path",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "set_full_load",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "is_full_load",
+								"value": {
+									"value": "@item().is_full_load",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "set_source_server_name",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "source_server_name",
+								"value": {
+									"value": "@item().server_name",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "set_source_database_name",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "source_database_name",
+								"value": {
+									"value": "@item().database_name",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "set_filename",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "sink_file_name",
+								"value": {
+									"value": "@item().target_file_name",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "set_load_column_name",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "load_column_name",
+								"value": {
+									"value": "@item().load_indentifier_column",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "set_load_column_value",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "load_column_value",
+								"value": {
+									"value": "@item().load_identifier_value",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "set_load_column_datatype",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "load_column_datatype",
+								"value": {
+									"value": "@item().load_identifier_datatype",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"variables": {
+			"source_conatiner_name": {
+				"type": "String"
+			},
+			"source_path": {
+				"type": "String"
+			},
+			"sink_container_name": {
+				"type": "String"
+			},
+			"sink_path": {
+				"type": "String"
+			},
+			"source_server_name": {
+				"type": "String"
+			},
+			"source_database_name": {
+				"type": "String"
+			},
+			"is_full_load": {
+				"type": "Boolean"
+			},
+			"sink_file_name": {
+				"type": "String"
+			},
+			"load_column_name": {
+				"type": "String"
+			},
+			"load_column_value": {
+				"type": "String"
+			},
+			"load_column_datatype": {
+				"type": "String"
+			}
+		},
+		"annotations": []
+	}
+}

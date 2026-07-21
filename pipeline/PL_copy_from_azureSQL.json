@@ -1,0 +1,218 @@
+{
+	"name": "PL_copy_from_azureSQL",
+	"properties": {
+		"activities": [
+			{
+				"name": "If_id_full_load",
+				"type": "IfCondition",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(pipeline().parameters.is_full_load,1)",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Copy_incremental_load",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [
+								{
+									"name": "Source",
+									"value": "dbo.@{pipeline().parameters.table_name}"
+								}
+							],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderQuery": {
+										"value": "@concat(\n'SELECT * FROM dbo.',\npipeline().parameters.table_name,\n' WHERE ',\npipeline().parameters.load_column_name,\n' > CAST (SELECT load_identifier_value\n      FROM metadata.ingestion_configuration\n      WHERE target_file_name = ''',\npipeline().parameters.table_name,\n''') AS',pipeline().parameters.load_column_datatype,')'\n)",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "ParquetSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "ParquetWriteSettings"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "DS_source_azure_sql_param",
+									"type": "DatasetReference",
+									"parameters": {
+										"param_server_name": {
+											"value": "@pipeline().parameters.server_name",
+											"type": "Expression"
+										},
+										"param_database_name": {
+											"value": "@pipeline().parameters.database_name",
+											"type": "Expression"
+										},
+										"param_table": {
+											"value": "@pipeline().parameters.table_name",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "DS_sink_adls_parquet",
+									"type": "DatasetReference",
+									"parameters": {
+										"container_name": {
+											"value": "@pipeline().parameters.sink_container_name",
+											"type": "Expression"
+										},
+										"sink_path": {
+											"value": "@concat(pipeline().parameters.sink_path,formatDateTime(utcNow(),'yyyy_MM_dd'))",
+											"type": "Expression"
+										},
+										"file_name": {
+											"value": "@concat(pipeline().parameters.table_name,'.parquet')",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Copy_full_load",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "ParquetSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "ParquetWriteSettings"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "DS_source_azure_sql_param",
+									"type": "DatasetReference",
+									"parameters": {
+										"param_server_name": {
+											"value": "@pipeline().parameters.server_name",
+											"type": "Expression"
+										},
+										"param_database_name": {
+											"value": "@pipeline().parameters.database_name",
+											"type": "Expression"
+										},
+										"param_table": {
+											"value": "@pipeline().parameters.table_name",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "DS_sink_adls_parquet",
+									"type": "DatasetReference",
+									"parameters": {
+										"param_container": {
+											"value": "@pipeline().parameters.sink_container_name",
+											"type": "Expression"
+										},
+										"param_path": {
+											"value": "@pipeline().parameters.sink_path",
+											"type": "Expression"
+										},
+										"file_name": {
+											"value": "@pipeline().parameters.table_name",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"is_full_load": {
+				"type": "string"
+			},
+			"server_name": {
+				"type": "string"
+			},
+			"database_name": {
+				"type": "string"
+			},
+			"table_name": {
+				"type": "string"
+			},
+			"sink_container_name": {
+				"type": "string"
+			},
+			"sink_path": {
+				"type": "string"
+			},
+			"load_column_name": {
+				"type": "string"
+			},
+			"load_column_value": {
+				"type": "string"
+			},
+			"load_column_datatype": {
+				"type": "string"
+			}
+		},
+		"annotations": []
+	}
+}
