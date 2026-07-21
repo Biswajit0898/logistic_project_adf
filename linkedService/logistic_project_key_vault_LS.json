@@ -1,0 +1,10 @@
+{
+	"name": "logistic_project_key_vault_LS",
+	"properties": {
+		"annotations": [],
+		"type": "AzureKeyVault",
+		"typeProperties": {
+			"baseUrl": "https://logisticproject2026kv.vault.azure.net/"
+		}
+	}
+}
