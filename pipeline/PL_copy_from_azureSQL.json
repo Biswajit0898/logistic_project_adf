@@ -33,20 +33,19 @@
 							"typeProperties": {
 								"source": {
 									"type": "AzureSqlSource",
-									"sqlReaderQuery": {
-										"value": "@concat(\n'SELECT * FROM dbo.',\npipeline().parameters.table_name,\n' WHERE ',\npipeline().parameters.load_column_name,\n' > CAST (SELECT load_identifier_value\n      FROM metadata.ingestion_configuration\n      WHERE target_file_name = ''',\npipeline().parameters.table_name,\n''') AS ',pipeline().parameters.load_column_datatype,')'\n)",
-										"type": "Expression"
-									},
+									"sqlReaderQuery": "@concat(\n'SELECT * FROM dbo.',\npipeline().parameters.table_name,\n' WHERE [',\npipeline().parameters.load_column_name,\n'] > CAST((',\n'SELECT load_identifier_value FROM metadata.ingestion_configuration ',\n'WHERE target_file_name = ''',\npipeline().parameters.table_name,\n''') AS ',\npipeline().parameters.load_column_datatype,\n')'\n)",
 									"queryTimeout": "02:00:00",
 									"partitionOption": "None"
 								},
 								"sink": {
-									"type": "ParquetSink",
+									"type": "DelimitedTextSink",
 									"storeSettings": {
 										"type": "AzureBlobFSWriteSettings"
 									},
 									"formatSettings": {
-										"type": "ParquetWriteSettings"
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ".txt"
 									}
 								},
 								"enableStaging": false,
@@ -81,19 +80,19 @@
 							],
 							"outputs": [
 								{
-									"referenceName": "DS_sink_adls_parquet",
+									"referenceName": "DS_sink_adls",
 									"type": "DatasetReference",
 									"parameters": {
-										"container_name": {
+										"param_container": {
 											"value": "@pipeline().parameters.sink_container_name",
 											"type": "Expression"
 										},
-										"sink_path": {
+										"param_path": {
 											"value": "@pipeline().parameters.sink_path",
 											"type": "Expression"
 										},
 										"file_name": {
-											"value": "@concat(pipeline().parameters.table_name,'.parquet')",
+											"value": "@pipeline().parameters.table_name",
 											"type": "Expression"
 										}
 									}
@@ -126,12 +125,14 @@
 									"partitionOption": "None"
 								},
 								"sink": {
-									"type": "ParquetSink",
+									"type": "DelimitedTextSink",
 									"storeSettings": {
 										"type": "AzureBlobFSWriteSettings"
 									},
 									"formatSettings": {
-										"type": "ParquetWriteSettings"
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ".txt"
 									}
 								},
 								"enableStaging": false,
@@ -166,19 +167,19 @@
 							],
 							"outputs": [
 								{
-									"referenceName": "DS_sink_adls_parquet",
+									"referenceName": "DS_sink_adls",
 									"type": "DatasetReference",
 									"parameters": {
-										"container_name": {
+										"param_container": {
 											"value": "@pipeline().parameters.sink_container_name",
 											"type": "Expression"
 										},
-										"sink_path": {
+										"param_path": {
 											"value": "@pipeline().parameters.sink_path",
 											"type": "Expression"
 										},
 										"file_name": {
-											"value": "@concat(pipeline().parameters.table_name,'.parquet')",
+											"value": "@pipeline().parameters.table_name",
 											"type": "Expression"
 										}
 									}
