@@ -78,15 +78,6 @@
 													},
 													"waitOnCompletion": true
 												}
-											},
-											{
-												"name": "adls_wait",
-												"type": "Wait",
-												"dependsOn": [],
-												"userProperties": [],
-												"typeProperties": {
-													"waitTimeInSeconds": 5
-												}
 											}
 										]
 									},
@@ -109,15 +100,6 @@
 														"type": "PipelineReference"
 													},
 													"waitOnCompletion": true
-												}
-											},
-											{
-												"name": "sql_wait",
-												"type": "Wait",
-												"dependsOn": [],
-												"userProperties": [],
-												"typeProperties": {
-													"waitTimeInSeconds": 5
 												}
 											}
 										]
