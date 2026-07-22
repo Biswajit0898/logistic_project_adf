@@ -1,0 +1,153 @@
+{
+	"name": "PL_copy_from_adls",
+	"properties": {
+		"activities": [
+			{
+				"name": "get_sonfig_table_data_adls",
+				"type": "Script",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "logistic_config_LS",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": "SELECT * FROM metadata.ingestion_configuration WHERE is_run = 1 AND source_name = 'adls';"
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "ForEachrecordadls",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "get_sonfig_table_data_adls",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('get_sonfig_table_data_adls').output.resultSets[0].rows",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Copy_file_from_adls",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [
+								{
+									"name": "Source",
+									"value": "@{variables('source_conatiner_name')}/@{variables('source_path')}/*.csv"
+								},
+								{
+									"name": "Destination",
+									"value": "@{variables('sink_container_name')}/@{variables('sink_path')}/"
+								}
+							],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"wildcardFileName": "*",
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "DelimitedTextSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ".txt"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "DS_source_adls",
+									"type": "DatasetReference",
+									"parameters": {
+										"param_container": {
+											"value": "@item().source_container_name",
+											"type": "Expression"
+										},
+										"param_path": {
+											"value": "@item().source_path",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "DS_sink_adls",
+									"type": "DatasetReference",
+									"parameters": {
+										"param_container": {
+											"value": "@item().target_container_name",
+											"type": "Expression"
+										},
+										"param_path": {
+											"value": "@item().target_path",
+											"type": "Expression"
+										},
+										"file_name": {
+											"value": "@item().target_file_name",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"variables": {
+			"x": {
+				"type": "String"
+			}
+		},
+		"annotations": []
+	}
+}

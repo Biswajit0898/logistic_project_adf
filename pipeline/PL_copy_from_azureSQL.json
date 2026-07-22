@@ -3,230 +3,324 @@
 	"properties": {
 		"activities": [
 			{
-				"name": "If_id_full_load",
-				"type": "IfCondition",
+				"name": "get_sonfig_table_data_azureSQL",
+				"type": "Lookup",
 				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
 				"userProperties": [],
 				"typeProperties": {
-					"expression": {
-						"value": "@equals(pipeline().parameters.is_full_load,1)",
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "SELECT * FROM metadata.ingestion_configuration WHERE is_run = 1 AND source_name = 'sql_db';",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "DS_ingetion_config_table",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "ForEachrecordazureSQL",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "get_sonfig_table_data_azureSQL",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('get_sonfig_table_data_azureSQL').output.value",
 						"type": "Expression"
 					},
-					"ifFalseActivities": [
+					"isSequential": true,
+					"activities": [
 						{
-							"name": "Copy_incremental_load",
-							"type": "Copy",
+							"name": "If_is_full_load",
+							"type": "IfCondition",
 							"dependsOn": [],
-							"policy": {
-								"timeout": "0.12:00:00",
-								"retry": 0,
-								"retryIntervalInSeconds": 30,
-								"secureOutput": false,
-								"secureInput": false
-							},
-							"userProperties": [
-								{
-									"name": "Source",
-									"value": "dbo.@{pipeline().parameters.table_name}"
-								}
-							],
+							"userProperties": [],
 							"typeProperties": {
-								"source": {
-									"type": "AzureSqlSource",
-									"sqlReaderQuery": "@concat(\n'SELECT * FROM dbo.',\npipeline().parameters.table_name,\n' WHERE [',\npipeline().parameters.load_column_name,\n'] > CAST((',\n'SELECT load_identifier_value FROM metadata.ingestion_configuration ',\n'WHERE target_file_name = ''',\npipeline().parameters.table_name,\n''') AS ',\npipeline().parameters.load_column_datatype,\n')'\n)",
-									"queryTimeout": "02:00:00",
-									"partitionOption": "None"
+								"expression": {
+									"value": "@equals(item().is_full_load,1)",
+									"type": "Expression"
 								},
-								"sink": {
-									"type": "DelimitedTextSink",
-									"storeSettings": {
-										"type": "AzureBlobFSWriteSettings"
+								"ifFalseActivities": [
+									{
+										"name": "Copy_incremental_load",
+										"type": "Copy",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "AzureSqlSource",
+												"sqlReaderQuery": {
+													"value": "@concat(\n'SELECT * FROM dbo.',\nitem().source_file_name,\n' WHERE [',\nitem().load_indentifier_column,\n'] > CAST((',\n'SELECT load_identifier_value FROM metadata.ingestion_configuration ',\n'WHERE source_file_name = ''',\nitem().source_file_name,\n''') AS ',\nitem().load_identifier_datatype,\n')'\n)",
+													"type": "Expression"
+												},
+												"queryTimeout": "02:00:00",
+												"partitionOption": "None"
+											},
+											"sink": {
+												"type": "DelimitedTextSink",
+												"storeSettings": {
+													"type": "AzureBlobFSWriteSettings"
+												},
+												"formatSettings": {
+													"type": "DelimitedTextWriteSettings",
+													"quoteAllText": true,
+													"fileExtension": ".txt"
+												}
+											},
+											"enableStaging": false,
+											"translator": {
+												"type": "TabularTranslator",
+												"typeConversion": true,
+												"typeConversionSettings": {
+													"allowDataTruncation": true,
+													"treatBooleanAsNumber": false
+												}
+											}
+										},
+										"inputs": [
+											{
+												"referenceName": "DS_source_azure_sql_param",
+												"type": "DatasetReference",
+												"parameters": {
+													"param_server_name": {
+														"value": "@item().server_name",
+														"type": "Expression"
+													},
+													"param_database_name": {
+														"value": "@item().database_name",
+														"type": "Expression"
+													},
+													"param_table": {
+														"value": "@item().source_file_name",
+														"type": "Expression"
+													}
+												}
+											}
+										],
+										"outputs": [
+											{
+												"referenceName": "DS_sink_adls",
+												"type": "DatasetReference",
+												"parameters": {
+													"param_container": {
+														"value": "@item().target_container_name",
+														"type": "Expression"
+													},
+													"param_path": {
+														"value": "@item().target_path",
+														"type": "Expression"
+													},
+													"file_name": {
+														"value": "@item().target_file_name",
+														"type": "Expression"
+													}
+												}
+											}
+										]
 									},
-									"formatSettings": {
-										"type": "DelimitedTextWriteSettings",
-										"quoteAllText": true,
-										"fileExtension": ".txt"
-									}
-								},
-								"enableStaging": false,
-								"translator": {
-									"type": "TabularTranslator",
-									"typeConversion": true,
-									"typeConversionSettings": {
-										"allowDataTruncation": true,
-										"treatBooleanAsNumber": false
-									}
-								}
-							},
-							"inputs": [
-								{
-									"referenceName": "DS_source_azure_sql_param",
-									"type": "DatasetReference",
-									"parameters": {
-										"param_server_name": {
-											"value": "@pipeline().parameters.server_name",
-											"type": "Expression"
+									{
+										"name": "get_identifier_value",
+										"type": "Lookup",
+										"dependsOn": [
+											{
+												"activity": "Copy_incremental_load",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
 										},
-										"param_database_name": {
-											"value": "@pipeline().parameters.database_name",
-											"type": "Expression"
-										},
-										"param_table": {
-											"value": "@pipeline().parameters.table_name",
-											"type": "Expression"
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "AzureSqlSource",
+												"sqlReaderQuery": {
+													"value": "@concat('SELECT MAX([',\nitem().load_indentifier_column,\n']) AS identifier_value FROM dbo.',\nitem().source_file_name\n)",
+													"type": "Expression"
+												},
+												"queryTimeout": "02:00:00",
+												"partitionOption": "None"
+											},
+											"dataset": {
+												"referenceName": "DS_source_azure_sql_param",
+												"type": "DatasetReference",
+												"parameters": {
+													"param_server_name": {
+														"value": "@item().server_name",
+														"type": "Expression"
+													},
+													"param_database_name": {
+														"value": "@item().database_name",
+														"type": "Expression"
+													},
+													"param_table": {
+														"value": "@item().source_file_name",
+														"type": "Expression"
+													}
+												}
+											}
 										}
-									}
-								}
-							],
-							"outputs": [
-								{
-									"referenceName": "DS_sink_adls",
-									"type": "DatasetReference",
-									"parameters": {
-										"param_container": {
-											"value": "@pipeline().parameters.sink_container_name",
-											"type": "Expression"
-										},
-										"param_path": {
-											"value": "@pipeline().parameters.sink_path",
-											"type": "Expression"
-										},
-										"file_name": {
-											"value": "@pipeline().parameters.table_name",
-											"type": "Expression"
-										}
-									}
-								}
-							]
-						}
-					],
-					"ifTrueActivities": [
-						{
-							"name": "Copy_full_load",
-							"type": "Copy",
-							"dependsOn": [],
-							"policy": {
-								"timeout": "0.12:00:00",
-								"retry": 0,
-								"retryIntervalInSeconds": 30,
-								"secureOutput": false,
-								"secureInput": false
-							},
-							"userProperties": [
-								{
-									"name": "Source",
-									"value": "dbo.@{pipeline().parameters.table_name}"
-								}
-							],
-							"typeProperties": {
-								"source": {
-									"type": "AzureSqlSource",
-									"queryTimeout": "02:00:00",
-									"partitionOption": "None"
-								},
-								"sink": {
-									"type": "DelimitedTextSink",
-									"storeSettings": {
-										"type": "AzureBlobFSWriteSettings"
 									},
-									"formatSettings": {
-										"type": "DelimitedTextWriteSettings",
-										"quoteAllText": true,
-										"fileExtension": ".txt"
-									}
-								},
-								"enableStaging": false,
-								"translator": {
-									"type": "TabularTranslator",
-									"typeConversion": true,
-									"typeConversionSettings": {
-										"allowDataTruncation": true,
-										"treatBooleanAsNumber": false
-									}
-								}
-							},
-							"inputs": [
-								{
-									"referenceName": "DS_source_azure_sql_param",
-									"type": "DatasetReference",
-									"parameters": {
-										"param_server_name": {
-											"value": "@pipeline().parameters.server_name",
-											"type": "Expression"
+									{
+										"name": "upfate_load_identifier_value",
+										"type": "Script",
+										"dependsOn": [
+											{
+												"activity": "get_identifier_value",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
 										},
-										"param_database_name": {
-											"value": "@pipeline().parameters.database_name",
-											"type": "Expression"
+										"userProperties": [],
+										"linkedServiceName": {
+											"referenceName": "logistic_config_LS",
+											"type": "LinkedServiceReference"
 										},
-										"param_table": {
-											"value": "@pipeline().parameters.table_name",
-											"type": "Expression"
+										"typeProperties": {
+											"scripts": [
+												{
+													"type": "NonQuery",
+													"text": {
+														"value": "@concat(\n'UPDATE metadata.ingestion_configuration SET load_identifier_value = CAST(''',\nactivity('get_identifier_value').output.firstRow.identifier_value,\n''' AS NVARCHAR(100)) WHERE source_file_name = ''',\nitem().source_file_name,\n''''\n)",
+														"type": "Expression"
+													}
+												}
+											],
+											"scriptBlockExecutionTimeout": "02:00:00"
 										}
 									}
-								}
-							],
-							"outputs": [
-								{
-									"referenceName": "DS_sink_adls",
-									"type": "DatasetReference",
-									"parameters": {
-										"param_container": {
-											"value": "@pipeline().parameters.sink_container_name",
-											"type": "Expression"
+								],
+								"ifTrueActivities": [
+									{
+										"name": "Copy_full_load",
+										"type": "Copy",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
 										},
-										"param_path": {
-											"value": "@pipeline().parameters.sink_path",
-											"type": "Expression"
+										"userProperties": [
+											{
+												"name": "Source",
+												"value": "dbo.@{pipeline().parameters.table_name}"
+											}
+										],
+										"typeProperties": {
+											"source": {
+												"type": "AzureSqlSource",
+												"queryTimeout": "02:00:00",
+												"partitionOption": "None"
+											},
+											"sink": {
+												"type": "DelimitedTextSink",
+												"storeSettings": {
+													"type": "AzureBlobFSWriteSettings"
+												},
+												"formatSettings": {
+													"type": "DelimitedTextWriteSettings",
+													"quoteAllText": true,
+													"fileExtension": ".txt"
+												}
+											},
+											"enableStaging": false,
+											"translator": {
+												"type": "TabularTranslator",
+												"typeConversion": true,
+												"typeConversionSettings": {
+													"allowDataTruncation": true,
+													"treatBooleanAsNumber": false
+												}
+											}
 										},
-										"file_name": {
-											"value": "@pipeline().parameters.table_name",
-											"type": "Expression"
-										}
+										"inputs": [
+											{
+												"referenceName": "DS_source_azure_sql_param",
+												"type": "DatasetReference",
+												"parameters": {
+													"param_server_name": {
+														"value": "@item().server_name",
+														"type": "Expression"
+													},
+													"param_database_name": {
+														"value": "@item().database_name",
+														"type": "Expression"
+													},
+													"param_table": {
+														"value": "@item().source_file_name",
+														"type": "Expression"
+													}
+												}
+											}
+										],
+										"outputs": [
+											{
+												"referenceName": "DS_sink_adls",
+												"type": "DatasetReference",
+												"parameters": {
+													"param_container": {
+														"value": "@item().target_container_name",
+														"type": "Expression"
+													},
+													"param_path": {
+														"value": "@item().target_path",
+														"type": "Expression"
+													},
+													"file_name": {
+														"value": "@item().target_file_name",
+														"type": "Expression"
+													}
+												}
+											}
+										]
 									}
-								}
-							]
+								]
+							}
 						}
 					]
 				}
 			}
 		],
-		"parameters": {
-			"is_full_load": {
-				"type": "bool"
-			},
-			"server_name": {
-				"type": "string",
-				"defaultValue": "''"
-			},
-			"database_name": {
-				"type": "string",
-				"defaultValue": "''"
-			},
-			"table_name": {
-				"type": "string",
-				"defaultValue": "''"
-			},
-			"sink_container_name": {
-				"type": "string",
-				"defaultValue": "''"
-			},
-			"sink_path": {
-				"type": "string",
-				"defaultValue": "''"
-			},
-			"load_column_name": {
-				"type": "string",
-				"defaultValue": "''"
-			},
-			"load_column_value": {
-				"type": "string",
-				"defaultValue": "''"
-			},
-			"load_column_datatype": {
-				"type": "string",
-				"defaultValue": "''"
-			}
-		},
 		"annotations": []
 	}
 }
