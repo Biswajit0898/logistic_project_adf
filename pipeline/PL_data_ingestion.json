@@ -17,7 +17,7 @@
 				"typeProperties": {
 					"source": {
 						"type": "AzureSqlSource",
-						"sqlReaderQuery": "SELECT source_name FROM metadata.ingestion_configuration WHERE is_run = 1;",
+						"sqlReaderQuery": "SELECT source_name  FROM metadata.ingestion_configuration WHERE is_run = 1;",
 						"queryTimeout": "02:00:00",
 						"partitionOption": "None"
 					},
@@ -64,8 +64,6 @@
 											{
 												"name": "Execute_PL_copy_from_adls",
 												"type": "ExecutePipeline",
-												"state": "Inactive",
-												"onInactiveMarkAs": "Succeeded",
 												"dependsOn": [],
 												"policy": {
 													"secureInput": false
@@ -87,8 +85,6 @@
 											{
 												"name": "Execute_PL_copy_from_azureSQL",
 												"type": "ExecutePipeline",
-												"state": "Inactive",
-												"onInactiveMarkAs": "Succeeded",
 												"dependsOn": [],
 												"policy": {
 													"secureInput": false

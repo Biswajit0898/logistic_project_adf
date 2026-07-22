@@ -69,7 +69,16 @@
 											"secureOutput": false,
 											"secureInput": false
 										},
-										"userProperties": [],
+										"userProperties": [
+											{
+												"name": "Source",
+												"value": "dbo.@{item().source_file_name}"
+											},
+											{
+												"name": "Destination",
+												"value": "@{item().target_container_name}/@{concat(item().target_path,formatDateTime(utcNow(),'yyyy/MM/dd'))}/@{concat(item().target_file_name,'.csv')}"
+											}
+										],
 										"typeProperties": {
 											"source": {
 												"type": "AzureSqlSource",
@@ -243,7 +252,11 @@
 										"userProperties": [
 											{
 												"name": "Source",
-												"value": "dbo.@{pipeline().parameters.table_name}"
+												"value": "dbo.@{item().source_file_name}"
+											},
+											{
+												"name": "Destination",
+												"value": "@{item().target_container_name}/@{concat(item().target_path,formatDateTime(utcNow(),'yyyy/MM/dd'))}/@{concat(item().target_file_name,'.csv')}"
 											}
 										],
 										"typeProperties": {
