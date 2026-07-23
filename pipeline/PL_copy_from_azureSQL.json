@@ -3,7 +3,7 @@
 	"properties": {
 		"activities": [
 			{
-				"name": "get_sonfig_table_data_azureSQL",
+				"name": "get_config_table_data_azureSQL",
 				"type": "Lookup",
 				"dependsOn": [],
 				"policy": {
@@ -33,7 +33,7 @@
 				"type": "ForEach",
 				"dependsOn": [
 					{
-						"activity": "get_sonfig_table_data_azureSQL",
+						"activity": "get_config_table_data_azureSQL",
 						"dependencyConditions": [
 							"Succeeded"
 						]
@@ -90,14 +90,12 @@
 												"partitionOption": "None"
 											},
 											"sink": {
-												"type": "DelimitedTextSink",
+												"type": "ParquetSink",
 												"storeSettings": {
 													"type": "AzureBlobFSWriteSettings"
 												},
 												"formatSettings": {
-													"type": "DelimitedTextWriteSettings",
-													"quoteAllText": true,
-													"fileExtension": ".txt"
+													"type": "ParquetWriteSettings"
 												}
 											},
 											"enableStaging": false,
@@ -132,14 +130,14 @@
 										],
 										"outputs": [
 											{
-												"referenceName": "DS_sink_adls",
+												"referenceName": "DS_sink_adls_parquet",
 												"type": "DatasetReference",
 												"parameters": {
-													"param_container": {
+													"container_name": {
 														"value": "@item().target_container_name",
 														"type": "Expression"
 													},
-													"param_path": {
+													"sink_path": {
 														"value": "@item().target_path",
 														"type": "Expression"
 													},
@@ -201,7 +199,7 @@
 										}
 									},
 									{
-										"name": "upfate_load_identifier_value",
+										"name": "update_load_identifier_value",
 										"type": "Script",
 										"dependsOn": [
 											{
