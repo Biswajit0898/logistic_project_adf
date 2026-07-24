@@ -1,0 +1,1049 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "logistic-project-2026-adf"
+		},
+		"logistic_project_adls_LS_accountKey": {
+			"type": "secureString",
+			"metadata": "Secure string for 'accountKey' of 'logistic_project_adls_LS'"
+		},
+		"logistic_project_adls_LS_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://logisticproject2026sa.dfs.core.windows.net/"
+		},
+		"logistic_project_key_vault_LS_properties_typeProperties_baseUrl": {
+			"type": "string",
+			"defaultValue": "https://logisticproject2026kv.vault.azure.net/"
+		},
+		"logistic_config_LS_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "logistic-project-db-server.database.windows.net"
+		},
+		"logistic_config_LS_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "logistic_project_2026_db"
+		},
+		"logistic_config_LS_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "biswa"
+		},
+		"logistuc_projecr_azureSQL_LS_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "@{linkedService().ls_param_dbserver}"
+		},
+		"logistuc_projecr_azureSQL_LS_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "@{linkedService().ls_param_db}"
+		},
+		"logistuc_projecr_azureSQL_LS_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "biswa"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/logistic_project_adls_LS')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('logistic_project_adls_LS_properties_typeProperties_url')]",
+					"accountKey": {
+						"type": "SecureString",
+						"value": "[parameters('logistic_project_adls_LS_accountKey')]"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/logistic_project_key_vault_LS')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureKeyVault",
+				"typeProperties": {
+					"baseUrl": "[parameters('logistic_project_key_vault_LS_properties_typeProperties_baseUrl')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/DS_sink_adls')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "logistic_project_adls_LS",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"param_container": {
+						"type": "string"
+					},
+					"param_path": {
+						"type": "string"
+					},
+					"file_name": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@concat(dataset().file_name,'.csv')",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@concat(dataset().param_path,formatDateTime(utcNow(),'yyyy/MM/dd'))",
+							"type": "Expression"
+						},
+						"fileSystem": {
+							"value": "@dataset().param_container",
+							"type": "Expression"
+						}
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/logistic_project_adls_LS')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/DS_sink_adls_parquet')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "logistic_project_adls_LS",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"container_name": {
+						"type": "string"
+					},
+					"sink_path": {
+						"type": "string"
+					},
+					"file_name": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "Parquet",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@concat(dataset().file_name,'.parquet')",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@concat(dataset().sink_path,formatDateTime(utcNow(),'yyyy/MM/dd'))",
+							"type": "Expression"
+						},
+						"fileSystem": {
+							"value": "@dataset().container_name",
+							"type": "Expression"
+						}
+					},
+					"compressionCodec": "snappy"
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/logistic_project_adls_LS')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/DS_source_adls')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "logistic_project_adls_LS",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"param_container": {
+						"type": "string"
+					},
+					"param_path": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": {
+							"value": "@dataset().param_path",
+							"type": "Expression"
+						},
+						"fileSystem": {
+							"value": "@dataset().param_container",
+							"type": "Expression"
+						}
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/logistic_project_adls_LS')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/logistic_config_LS')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"server": "[parameters('logistic_config_LS_properties_typeProperties_server')]",
+					"database": "[parameters('logistic_config_LS_properties_typeProperties_database')]",
+					"encrypt": "mandatory",
+					"trustServerCertificate": true,
+					"authenticationType": "SQL",
+					"userName": "[parameters('logistic_config_LS_properties_typeProperties_userName')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "logistic_project_key_vault_LS",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "clientdbpassword"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/logistic_project_key_vault_LS')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/logistuc_projecr_azureSQL_LS')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"parameters": {
+					"ls_param_dbserver": {
+						"type": "string"
+					},
+					"ls_param_db": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"server": "[parameters('logistuc_projecr_azureSQL_LS_properties_typeProperties_server')]",
+					"database": "[parameters('logistuc_projecr_azureSQL_LS_properties_typeProperties_database')]",
+					"encrypt": "mandatory",
+					"trustServerCertificate": true,
+					"authenticationType": "SQL",
+					"userName": "[parameters('logistuc_projecr_azureSQL_LS_properties_typeProperties_userName')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "logistic_project_key_vault_LS",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "clientdbpassword"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/logistic_project_key_vault_LS')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/PL_copy_from_adls')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "get_sonfig_table_data_adls",
+						"type": "Script",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"linkedServiceName": {
+							"referenceName": "logistic_config_LS",
+							"type": "LinkedServiceReference"
+						},
+						"typeProperties": {
+							"scripts": [
+								{
+									"type": "Query",
+									"text": "SELECT * FROM metadata.ingestion_configuration WHERE is_run = 1 AND source_name = 'adls';"
+								}
+							],
+							"scriptBlockExecutionTimeout": "02:00:00"
+						}
+					},
+					{
+						"name": "ForEachrecordadls",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "get_sonfig_table_data_adls",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('get_sonfig_table_data_adls').output.resultSets[0].rows",
+								"type": "Expression"
+							},
+							"isSequential": true,
+							"activities": [
+								{
+									"name": "Copy_file_from_adls",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [
+										{
+											"name": "Source",
+											"value": "@{item().source_container_name}/@{item().source_path}/"
+										},
+										{
+											"name": "Destination",
+											"value": "@{item().target_container_name}/@{concat(item().target_path,formatDateTime(utcNow(),'yyyy/MM/dd'))}/@{concat(item().target_file_name,'.csv')}"
+										}
+									],
+									"typeProperties": {
+										"source": {
+											"type": "DelimitedTextSource",
+											"storeSettings": {
+												"type": "AzureBlobFSReadSettings",
+												"recursive": true,
+												"wildcardFileName": "*",
+												"enablePartitionDiscovery": false
+											},
+											"formatSettings": {
+												"type": "DelimitedTextReadSettings"
+											}
+										},
+										"sink": {
+											"type": "DelimitedTextSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "DelimitedTextWriteSettings",
+												"quoteAllText": true,
+												"fileExtension": ".txt"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "DS_source_adls",
+											"type": "DatasetReference",
+											"parameters": {
+												"param_container": {
+													"value": "@item().source_container_name",
+													"type": "Expression"
+												},
+												"param_path": {
+													"value": "@item().source_path",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "DS_sink_adls",
+											"type": "DatasetReference",
+											"parameters": {
+												"param_container": {
+													"value": "@item().target_container_name",
+													"type": "Expression"
+												},
+												"param_path": {
+													"value": "@item().target_path",
+													"type": "Expression"
+												},
+												"file_name": {
+													"value": "@item().target_file_name",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"variables": {
+					"x": {
+						"type": "String"
+					}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/logistic_config_LS')]",
+				"[concat(variables('factoryId'), '/datasets/DS_source_adls')]",
+				"[concat(variables('factoryId'), '/datasets/DS_sink_adls')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/DS_ingetion_config_table')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "logistic_config_LS",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [
+					{
+						"name": "id",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "is_run",
+						"type": "bit"
+					},
+					{
+						"name": "is_processed",
+						"type": "bit"
+					},
+					{
+						"name": "source_name",
+						"type": "nvarchar"
+					},
+					{
+						"name": "server_name",
+						"type": "nvarchar"
+					},
+					{
+						"name": "database_name",
+						"type": "nvarchar"
+					},
+					{
+						"name": "source_container_name",
+						"type": "nvarchar"
+					},
+					{
+						"name": "source_file_name",
+						"type": "nvarchar"
+					},
+					{
+						"name": "source_path",
+						"type": "nvarchar"
+					},
+					{
+						"name": "target_container_name",
+						"type": "nvarchar"
+					},
+					{
+						"name": "target_file_name",
+						"type": "nvarchar"
+					},
+					{
+						"name": "target_path",
+						"type": "nvarchar"
+					},
+					{
+						"name": "is_full_load",
+						"type": "bit"
+					},
+					{
+						"name": "load_indentifier_column",
+						"type": "nvarchar"
+					},
+					{
+						"name": "load_identifier_value",
+						"type": "nvarchar"
+					}
+				],
+				"typeProperties": {
+					"schema": "metadata",
+					"table": "ingestion_configuration"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/logistic_config_LS')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/DS_source_azure_sql_param')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "logistuc_projecr_azureSQL_LS",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ls_param_dbserver": {
+							"value": "@dataset().param_server_name",
+							"type": "Expression"
+						},
+						"ls_param_db": {
+							"value": "@dataset().param_database_name",
+							"type": "Expression"
+						}
+					}
+				},
+				"parameters": {
+					"param_server_name": {
+						"type": "string"
+					},
+					"param_database_name": {
+						"type": "string"
+					},
+					"param_table": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": {
+						"value": "@dataset().param_table",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/logistuc_projecr_azureSQL_LS')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/PL_copy_from_azureSQL')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "get_config_table_data_azureSQL",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": "SELECT * FROM metadata.ingestion_configuration WHERE is_run = 1 AND source_name = 'sql_db';",
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "DS_ingetion_config_table",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "ForEachrecordazureSQL",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "get_config_table_data_azureSQL",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('get_config_table_data_azureSQL').output.value",
+								"type": "Expression"
+							},
+							"isSequential": true,
+							"activities": [
+								{
+									"name": "If_is_full_load",
+									"type": "IfCondition",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"expression": {
+											"value": "@equals(item().is_full_load,1)",
+											"type": "Expression"
+										},
+										"ifFalseActivities": [
+											{
+												"name": "Copy_incremental_load",
+												"type": "Copy",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [
+													{
+														"name": "Source",
+														"value": "dbo.@{item().source_file_name}"
+													},
+													{
+														"name": "Destination",
+														"value": "@{item().target_container_name}/@{concat(item().target_path,formatDateTime(utcNow(),'yyyy/MM/dd'))}/@{concat(item().target_file_name,'.csv')}"
+													}
+												],
+												"typeProperties": {
+													"source": {
+														"type": "AzureSqlSource",
+														"sqlReaderQuery": {
+															"value": "@concat(\n'SELECT * FROM dbo.',\nitem().source_file_name,\n' WHERE [',\nitem().load_indentifier_column,\n'] > CAST((',\n'SELECT load_identifier_value FROM metadata.ingestion_configuration ',\n'WHERE source_file_name = ''',\nitem().source_file_name,\n''') AS ',\nitem().load_identifier_datatype,\n')'\n)",
+															"type": "Expression"
+														},
+														"queryTimeout": "02:00:00",
+														"partitionOption": "None"
+													},
+													"sink": {
+														"type": "ParquetSink",
+														"storeSettings": {
+															"type": "AzureBlobFSWriteSettings"
+														},
+														"formatSettings": {
+															"type": "ParquetWriteSettings"
+														}
+													},
+													"enableStaging": false,
+													"translator": {
+														"type": "TabularTranslator",
+														"typeConversion": true,
+														"typeConversionSettings": {
+															"allowDataTruncation": true,
+															"treatBooleanAsNumber": false
+														}
+													}
+												},
+												"inputs": [
+													{
+														"referenceName": "DS_source_azure_sql_param",
+														"type": "DatasetReference",
+														"parameters": {
+															"param_server_name": {
+																"value": "@item().server_name",
+																"type": "Expression"
+															},
+															"param_database_name": {
+																"value": "@item().database_name",
+																"type": "Expression"
+															},
+															"param_table": {
+																"value": "@item().source_file_name",
+																"type": "Expression"
+															}
+														}
+													}
+												],
+												"outputs": [
+													{
+														"referenceName": "DS_sink_adls_parquet",
+														"type": "DatasetReference",
+														"parameters": {
+															"container_name": {
+																"value": "@item().target_container_name",
+																"type": "Expression"
+															},
+															"sink_path": {
+																"value": "@item().target_path",
+																"type": "Expression"
+															},
+															"file_name": {
+																"value": "@item().target_file_name",
+																"type": "Expression"
+															}
+														}
+													}
+												]
+											},
+											{
+												"name": "get_identifier_value",
+												"type": "Lookup",
+												"dependsOn": [
+													{
+														"activity": "Copy_incremental_load",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "AzureSqlSource",
+														"sqlReaderQuery": {
+															"value": "@concat('SELECT MAX([',\nitem().load_indentifier_column,\n']) AS identifier_value FROM dbo.',\nitem().source_file_name\n)",
+															"type": "Expression"
+														},
+														"queryTimeout": "02:00:00",
+														"partitionOption": "None"
+													},
+													"dataset": {
+														"referenceName": "DS_source_azure_sql_param",
+														"type": "DatasetReference",
+														"parameters": {
+															"param_server_name": {
+																"value": "@item().server_name",
+																"type": "Expression"
+															},
+															"param_database_name": {
+																"value": "@item().database_name",
+																"type": "Expression"
+															},
+															"param_table": {
+																"value": "@item().source_file_name",
+																"type": "Expression"
+															}
+														}
+													}
+												}
+											},
+											{
+												"name": "update_load_identifier_value",
+												"type": "Script",
+												"dependsOn": [
+													{
+														"activity": "get_identifier_value",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"linkedServiceName": {
+													"referenceName": "logistic_config_LS",
+													"type": "LinkedServiceReference"
+												},
+												"typeProperties": {
+													"scripts": [
+														{
+															"type": "NonQuery",
+															"text": {
+																"value": "@concat(\n'UPDATE metadata.ingestion_configuration SET load_identifier_value = CAST(''',\nactivity('get_identifier_value').output.firstRow.identifier_value,\n''' AS NVARCHAR(100)) WHERE source_file_name = ''',\nitem().source_file_name,\n''''\n)",
+																"type": "Expression"
+															}
+														}
+													],
+													"scriptBlockExecutionTimeout": "02:00:00"
+												}
+											}
+										],
+										"ifTrueActivities": [
+											{
+												"name": "Copy_full_load",
+												"type": "Copy",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [
+													{
+														"name": "Source",
+														"value": "dbo.@{item().source_file_name}"
+													},
+													{
+														"name": "Destination",
+														"value": "@{item().target_container_name}/@{concat(item().target_path,formatDateTime(utcNow(),'yyyy/MM/dd'))}/@{concat(item().target_file_name,'.csv')}"
+													}
+												],
+												"typeProperties": {
+													"source": {
+														"type": "AzureSqlSource",
+														"queryTimeout": "02:00:00",
+														"partitionOption": "None"
+													},
+													"sink": {
+														"type": "DelimitedTextSink",
+														"storeSettings": {
+															"type": "AzureBlobFSWriteSettings"
+														},
+														"formatSettings": {
+															"type": "DelimitedTextWriteSettings",
+															"quoteAllText": true,
+															"fileExtension": ".txt"
+														}
+													},
+													"enableStaging": false,
+													"translator": {
+														"type": "TabularTranslator",
+														"typeConversion": true,
+														"typeConversionSettings": {
+															"allowDataTruncation": true,
+															"treatBooleanAsNumber": false
+														}
+													}
+												},
+												"inputs": [
+													{
+														"referenceName": "DS_source_azure_sql_param",
+														"type": "DatasetReference",
+														"parameters": {
+															"param_server_name": {
+																"value": "@item().server_name",
+																"type": "Expression"
+															},
+															"param_database_name": {
+																"value": "@item().database_name",
+																"type": "Expression"
+															},
+															"param_table": {
+																"value": "@item().source_file_name",
+																"type": "Expression"
+															}
+														}
+													}
+												],
+												"outputs": [
+													{
+														"referenceName": "DS_sink_adls",
+														"type": "DatasetReference",
+														"parameters": {
+															"param_container": {
+																"value": "@item().target_container_name",
+																"type": "Expression"
+															},
+															"param_path": {
+																"value": "@item().target_path",
+																"type": "Expression"
+															},
+															"file_name": {
+																"value": "@item().target_file_name",
+																"type": "Expression"
+															}
+														}
+													}
+												]
+											}
+										]
+									}
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/DS_ingetion_config_table')]",
+				"[concat(variables('factoryId'), '/datasets/DS_source_azure_sql_param')]",
+				"[concat(variables('factoryId'), '/datasets/DS_sink_adls_parquet')]",
+				"[concat(variables('factoryId'), '/linkedServices/logistic_config_LS')]",
+				"[concat(variables('factoryId'), '/datasets/DS_sink_adls')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/PL_data_ingestion')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Lookup_ingestion_config_table_source",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": "SELECT source_name  FROM metadata.ingestion_configuration WHERE is_run = 1;",
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "DS_ingetion_config_table",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "for_each_record",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "Lookup_ingestion_config_table_source",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('Lookup_ingestion_config_table_source').output.value",
+								"type": "Expression"
+							},
+							"isSequential": true,
+							"activities": [
+								{
+									"name": "Switch_resources",
+									"type": "Switch",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"on": {
+											"value": "@item().source_name",
+											"type": "Expression"
+										},
+										"cases": [
+											{
+												"value": "adls",
+												"activities": [
+													{
+														"name": "Execute_PL_copy_from_adls",
+														"type": "ExecutePipeline",
+														"dependsOn": [],
+														"policy": {
+															"secureInput": false
+														},
+														"userProperties": [],
+														"typeProperties": {
+															"pipeline": {
+																"referenceName": "PL_copy_from_adls",
+																"type": "PipelineReference"
+															},
+															"waitOnCompletion": true,
+															"parameters": {}
+														}
+													}
+												]
+											},
+											{
+												"value": "sql_db",
+												"activities": [
+													{
+														"name": "Execute_PL_copy_from_azureSQL",
+														"type": "ExecutePipeline",
+														"dependsOn": [],
+														"policy": {
+															"secureInput": false
+														},
+														"userProperties": [],
+														"typeProperties": {
+															"pipeline": {
+																"referenceName": "PL_copy_from_azureSQL",
+																"type": "PipelineReference"
+															},
+															"waitOnCompletion": true,
+															"parameters": {}
+														}
+													}
+												]
+											}
+										]
+									}
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/DS_ingetion_config_table')]",
+				"[concat(variables('factoryId'), '/pipelines/PL_copy_from_adls')]",
+				"[concat(variables('factoryId'), '/pipelines/PL_copy_from_azureSQL')]"
+			]
+		}
+	]
+}

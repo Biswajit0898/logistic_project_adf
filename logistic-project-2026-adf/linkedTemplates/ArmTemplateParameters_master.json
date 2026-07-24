@@ -1,0 +1,42 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"value": "logistic-project-2026-adf"
+		},
+		"logistic_project_adls_LS_accountKey": {
+			"value": ""
+		},
+		"logistic_config_LS_properties_typeProperties_server": {
+			"value": "logistic-project-db-server.database.windows.net"
+		},
+		"logistic_config_LS_properties_typeProperties_database": {
+			"value": "logistic_project_2026_db"
+		},
+		"logistic_config_LS_properties_typeProperties_userName": {
+			"value": "biswa"
+		},
+		"logistic_project_adls_LS_properties_typeProperties_url": {
+			"value": "https://logisticproject2026sa.dfs.core.windows.net/"
+		},
+		"logistic_project_key_vault_LS_properties_typeProperties_baseUrl": {
+			"value": "https://logisticproject2026kv.vault.azure.net/"
+		},
+		"logistuc_projecr_azureSQL_LS_properties_typeProperties_server": {
+			"value": "@{linkedService().ls_param_dbserver}"
+		},
+		"logistuc_projecr_azureSQL_LS_properties_typeProperties_database": {
+			"value": "@{linkedService().ls_param_db}"
+		},
+		"logistuc_projecr_azureSQL_LS_properties_typeProperties_userName": {
+			"value": "biswa"
+		},
+		"containerUri": {
+			"value": ""
+		},
+		"containerSasToken": {
+			"value": ""
+		}
+	}
+}
