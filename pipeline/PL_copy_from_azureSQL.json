@@ -42,7 +42,7 @@
 				"userProperties": [],
 				"typeProperties": {
 					"items": {
-						"value": "@activity('get_sonfig_table_data_azureSQL').output.value",
+						"value": "@activity('get_config_table_data_azureSQL').output.value",
 						"type": "Expression"
 					},
 					"isSequential": true,
