@@ -7,9 +7,17 @@
 			"metadata": "Data Factory name",
 			"defaultValue": "logistic-project-2026-adf"
 		},
+		"LS_logistic_project_adb_accessToken": {
+			"type": "secureString",
+			"metadata": "Secure string for 'accessToken' of 'LS_logistic_project_adb'"
+		},
 		"logistic_project_adls_LS_accountKey": {
 			"type": "secureString",
 			"metadata": "Secure string for 'accountKey' of 'logistic_project_adls_LS'"
+		},
+		"LS_logistic_project_adb_properties_typeProperties_existingClusterId": {
+			"type": "string",
+			"defaultValue": "0723-101212-7uierkpe"
 		},
 		"logistic_config_LS_properties_typeProperties_server": {
 			"type": "string",
@@ -102,7 +110,14 @@
 								{
 									"name": "Copy_file_from_adls",
 									"type": "Copy",
-									"dependsOn": [],
+									"dependsOn": [
+										{
+											"activity": "set_is_processed_false_adls",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
 									"policy": {
 										"timeout": "0.12:00:00",
 										"retry": 0,
@@ -190,6 +205,71 @@
 											}
 										}
 									]
+								},
+								{
+									"name": "set_is_processed_false_adls",
+									"type": "Script",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"linkedServiceName": {
+										"referenceName": "logistic_config_LS",
+										"type": "LinkedServiceReference"
+									},
+									"typeProperties": {
+										"scripts": [
+											{
+												"type": "Query",
+												"text": {
+													"value": "UPDATE metadata.ingestion_configuration SET is_processed = 0 WHERE id = @{item().id}",
+													"type": "Expression"
+												}
+											}
+										],
+										"scriptBlockExecutionTimeout": "02:00:00"
+									}
+								},
+								{
+									"name": "set_is_processed_true_adls",
+									"type": "Script",
+									"dependsOn": [
+										{
+											"activity": "Copy_file_from_adls",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"linkedServiceName": {
+										"referenceName": "logistic_config_LS",
+										"type": "LinkedServiceReference"
+									},
+									"typeProperties": {
+										"scripts": [
+											{
+												"type": "Query",
+												"text": {
+													"value": "UPDATE metadata.ingestion_configuration SET is_processed = 1 WHERE id = @{item().id}",
+													"type": "Expression"
+												}
+											}
+										],
+										"scriptBlockExecutionTimeout": "02:00:00"
+									}
 								}
 							]
 						}
@@ -203,7 +283,8 @@
 						"type": "String"
 					}
 				},
-				"annotations": []
+				"annotations": [],
+				"lastPublishTime": "2026-07-27T19:56:44Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/linkedServices/logistic_config_LS')]",
@@ -277,7 +358,14 @@
 											{
 												"name": "Copy_incremental_load",
 												"type": "Copy",
-												"dependsOn": [],
+												"dependsOn": [
+													{
+														"activity": "set_is_processed_false_sql_2",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
 												"policy": {
 													"timeout": "0.12:00:00",
 													"retry": 0,
@@ -415,7 +503,72 @@
 												}
 											},
 											{
-												"name": "update_load_identifier_value",
+												"name": "set_is_processed_false_sql_2",
+												"type": "Script",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"linkedServiceName": {
+													"referenceName": "logistic_config_LS",
+													"type": "LinkedServiceReference"
+												},
+												"typeProperties": {
+													"scripts": [
+														{
+															"type": "Query",
+															"text": {
+																"value": "UPDATE metadata.ingestion_configuration SET is_processed = 0 WHERE id = @{item().id}",
+																"type": "Expression"
+															}
+														}
+													],
+													"scriptBlockExecutionTimeout": "02:00:00"
+												}
+											},
+											{
+												"name": "set_is_processed_true_sql-2",
+												"type": "Script",
+												"dependsOn": [
+													{
+														"activity": "Update_identifier_value",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"linkedServiceName": {
+													"referenceName": "logistic_config_LS",
+													"type": "LinkedServiceReference"
+												},
+												"typeProperties": {
+													"scripts": [
+														{
+															"type": "Query",
+															"text": {
+																"value": "UPDATE metadata.ingestion_configuration SET is_processed = 1 WHERE id = @{item().id}",
+																"type": "Expression"
+															}
+														}
+													],
+													"scriptBlockExecutionTimeout": "02:00:00"
+												}
+											},
+											{
+												"name": "Update_identifier_value",
 												"type": "Script",
 												"dependsOn": [
 													{
@@ -442,7 +595,7 @@
 														{
 															"type": "NonQuery",
 															"text": {
-																"value": "@concat(\n'UPDATE metadata.ingestion_configuration SET load_identifier_value = CAST(''',\nactivity('get_identifier_value').output.firstRow.identifier_value,\n''' AS NVARCHAR(100)) WHERE source_file_name = ''',\nitem().source_file_name,\n''''\n)",
+																"value": "UPADTE metadata.ingestion_configuration SET load_identifier_value = @{activity('get_identifier_value').output.firstRow.identifier_value} WHERE id = @{item().id};",
 																"type": "Expression"
 															}
 														}
@@ -455,7 +608,14 @@
 											{
 												"name": "Copy_full_load",
 												"type": "Copy",
-												"dependsOn": [],
+												"dependsOn": [
+													{
+														"activity": "set_is_processed_false_sql_1",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
 												"policy": {
 													"timeout": "0.12:00:00",
 													"retry": 0,
@@ -540,6 +700,71 @@
 														}
 													}
 												]
+											},
+											{
+												"name": "set_is_processed_false_sql_1",
+												"type": "Script",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"linkedServiceName": {
+													"referenceName": "logistic_config_LS",
+													"type": "LinkedServiceReference"
+												},
+												"typeProperties": {
+													"scripts": [
+														{
+															"type": "Query",
+															"text": {
+																"value": "UPDATE metadata.ingestion_configuration SET is_processed = 0 WHERE id = @{item().id}",
+																"type": "Expression"
+															}
+														}
+													],
+													"scriptBlockExecutionTimeout": "02:00:00"
+												}
+											},
+											{
+												"name": "set_is_processed_true_sql-1",
+												"type": "Script",
+												"dependsOn": [
+													{
+														"activity": "Copy_full_load",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"linkedServiceName": {
+													"referenceName": "logistic_config_LS",
+													"type": "LinkedServiceReference"
+												},
+												"typeProperties": {
+													"scripts": [
+														{
+															"type": "Query",
+															"text": {
+																"value": "UPDATE metadata.ingestion_configuration SET is_processed = 1 WHERE id = @{item().id}",
+																"type": "Expression"
+															}
+														}
+													],
+													"scriptBlockExecutionTimeout": "02:00:00"
+												}
 											}
 										]
 									}
@@ -551,7 +776,8 @@
 				"policy": {
 					"elapsedTimeMetric": {}
 				},
-				"annotations": []
+				"annotations": [],
+				"lastPublishTime": "2026-07-27T19:56:44Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/DS_ingetion_config_table')]",
@@ -678,12 +904,285 @@
 				"policy": {
 					"elapsedTimeMetric": {}
 				},
-				"annotations": []
+				"annotations": [],
+				"lastPublishTime": "2026-07-27T19:40:58Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/DS_ingetion_config_table')]",
 				"[concat(variables('factoryId'), '/pipelines/PL_copy_from_adls')]",
 				"[concat(variables('factoryId'), '/pipelines/PL_copy_from_azureSQL')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/PL_data_transfermation')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "bronze_notebook",
+						"type": "DatabricksNotebook",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"notebookPath": "/Users/biswajit@barsanapattanayakgmail.onmicrosoft.com/logistic_project_2026/bronze_notebooks/bronze_notebook",
+							"baseParameters": {
+								"masterPipelineRunID": {
+									"value": "@pipeline().RunId",
+									"type": "Expression"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "LS_logistic_project_adb",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "silver_notebook",
+						"type": "DatabricksNotebook",
+						"dependsOn": [
+							{
+								"activity": "bronze_notebook",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"notebookPath": "/Users/biswajit@barsanapattanayakgmail.onmicrosoft.com/logistic_project_2026/silver_notebooks/silver_notebook",
+							"baseParameters": {
+								"masterPipelineRunID": {
+									"value": "@pipeline().RunId",
+									"type": "Expression"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "LS_logistic_project_adb",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "gold_notebook",
+						"type": "DatabricksNotebook",
+						"dependsOn": [
+							{
+								"activity": "silver_notebook",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"notebookPath": "/Users/biswajit@barsanapattanayakgmail.onmicrosoft.com/logistic_project_2026/gold_notebooks/gold_notebook",
+							"baseParameters": {
+								"masterPipelineRunID": {
+									"value": "@pipeline().RunId",
+									"type": "Expression"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "LS_logistic_project_adb",
+							"type": "LinkedServiceReference"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2026-07-27T07:20:23Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/LS_logistic_project_adb')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/PL_main')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Execute _PL_data_ingestion",
+						"type": "ExecutePipeline",
+						"state": "Inactive",
+						"onInactiveMarkAs": "Succeeded",
+						"dependsOn": [
+							{
+								"activity": "Execute_PL_trigger_main",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "PL_data_ingestion",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "Execute_PL_data_transfermation",
+						"type": "ExecutePipeline",
+						"state": "Inactive",
+						"onInactiveMarkAs": "Succeeded",
+						"dependsOn": [
+							{
+								"activity": "Execute _PL_data_ingestion",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "PL_data_transfermation",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "Execute_PL_trigger_main",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "PL_trigger_main",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2026-07-27T19:40:59Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/PL_data_ingestion')]",
+				"[concat(variables('factoryId'), '/pipelines/PL_data_transfermation')]",
+				"[concat(variables('factoryId'), '/pipelines/PL_trigger_main')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/PL_trigger_main')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Until_all_process_completed",
+						"type": "Until",
+						"dependsOn": [],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@equals(activity('count_is_run_is_processed').output.firstRow.is_run_count,activity('count_is_run_is_processed').output.firstRow.is_processed_count)",
+								"type": "Expression"
+							},
+							"activities": [
+								{
+									"name": "count_is_run_is_processed",
+									"type": "Lookup",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "AzureSqlSource",
+											"sqlReaderQuery": "SELECT COUNT(is_run)  AS is_run_count ,\nCOUNT(CASE WHEN is_processed = 1 THEN 1 END) AS is_processed_count FROM metadata.ingestion_configuration WHERE is_run = 1",
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"dataset": {
+											"referenceName": "DS_ingetion_config_table",
+											"type": "DatasetReference",
+											"parameters": {}
+										},
+										"firstRowOnly": true
+									}
+								},
+								{
+									"name": "Wait_5min",
+									"type": "Wait",
+									"dependsOn": [
+										{
+											"activity": "count_is_run_is_processed",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"waitTimeInSeconds": 60
+									}
+								}
+							],
+							"timeout": "0.12:00:00"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2026-07-27T19:40:58Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/DS_ingetion_config_table')]"
 			]
 		},
 		{
@@ -799,7 +1298,7 @@
 							"type": "Expression"
 						},
 						"folderPath": {
-							"value": "@concat(dataset().param_path,formatDateTime(utcNow(),'yyyy/MM/dd'))",
+							"value": "@dataset().param_path",
 							"type": "Expression"
 						},
 						"fileSystem": {
@@ -848,7 +1347,7 @@
 							"type": "Expression"
 						},
 						"folderPath": {
-							"value": "@concat(dataset().sink_path,formatDateTime(utcNow(),'yyyy/MM/dd'))",
+							"value": "@dataset().sink_path",
 							"type": "Expression"
 						},
 						"fileSystem": {
@@ -950,6 +1449,24 @@
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/linkedServices/logistuc_projecr_azureSQL_LS')]"
 			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LS_logistic_project_adb')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureDatabricks",
+				"typeProperties": {
+					"domain": "https://adb-7405619128018770.10.azuredatabricks.net",
+					"accessToken": {
+						"type": "SecureString",
+						"value": "[parameters('LS_logistic_project_adb_accessToken')]"
+					},
+					"existingClusterId": "[parameters('LS_logistic_project_adb_properties_typeProperties_existingClusterId')]"
+				}
+			},
+			"dependsOn": []
 		},
 		{
 			"name": "[concat(parameters('factoryName'), '/logistic_config_LS')]",

@@ -5,8 +5,14 @@
 		"factoryName": {
 			"value": "logistic-project-2026-adf"
 		},
+		"LS_logistic_project_adb_accessToken": {
+			"value": ""
+		},
 		"logistic_project_adls_LS_accountKey": {
 			"value": ""
+		},
+		"LS_logistic_project_adb_properties_typeProperties_existingClusterId": {
+			"value": "0723-101212-7uierkpe"
 		},
 		"logistic_config_LS_properties_typeProperties_server": {
 			"value": "logistic-project-db-server.database.windows.net"

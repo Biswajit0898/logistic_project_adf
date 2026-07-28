@@ -7,9 +7,17 @@
 			"metadata": "Data Factory name",
 			"defaultValue": "logistic-project-2026-adf"
 		},
+		"LS_logistic_project_adb_accessToken": {
+			"type": "secureString",
+			"metadata": "Secure string for 'accessToken' of 'LS_logistic_project_adb'"
+		},
 		"logistic_project_adls_LS_accountKey": {
 			"type": "secureString",
 			"metadata": "Secure string for 'accountKey' of 'logistic_project_adls_LS'"
+		},
+		"LS_logistic_project_adb_properties_typeProperties_existingClusterId": {
+			"type": "string",
+			"defaultValue": "0723-101212-7uierkpe"
 		},
 		"logistic_config_LS_properties_typeProperties_server": {
 			"type": "string",
@@ -70,8 +78,14 @@
 					"factoryName": {
 						"value": "[parameters('factoryName')]"
 					},
+					"LS_logistic_project_adb_accessToken": {
+						"value": "[parameters('LS_logistic_project_adb_accessToken')]"
+					},
 					"logistic_project_adls_LS_accountKey": {
 						"value": "[parameters('logistic_project_adls_LS_accountKey')]"
+					},
+					"LS_logistic_project_adb_properties_typeProperties_existingClusterId": {
+						"value": "[parameters('LS_logistic_project_adb_properties_typeProperties_existingClusterId')]"
 					},
 					"logistic_project_adls_LS_properties_typeProperties_url": {
 						"value": "[parameters('logistic_project_adls_LS_properties_typeProperties_url')]"
