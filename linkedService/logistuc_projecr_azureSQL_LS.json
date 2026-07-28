@@ -1,5 +1,6 @@
 {
 	"name": "logistuc_projecr_azureSQL_LS",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
 	"properties": {
 		"parameters": {
 			"ls_param_dbserver": {

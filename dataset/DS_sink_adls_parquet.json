@@ -26,7 +26,7 @@
 					"type": "Expression"
 				},
 				"folderPath": {
-					"value": "@concat(dataset().sink_path,formatDateTime(utcNow(),'yyyy/MM/dd'))",
+					"value": "@dataset().sink_path",
 					"type": "Expression"
 				},
 				"fileSystem": {
@@ -37,5 +37,6 @@
 			"compressionCodec": "snappy"
 		},
 		"schema": []
-	}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
 }

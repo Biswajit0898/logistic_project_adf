@@ -1,5 +1,6 @@
 {
 	"name": "logistic_config_LS",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
 	"properties": {
 		"annotations": [],
 		"type": "AzureSqlDatabase",

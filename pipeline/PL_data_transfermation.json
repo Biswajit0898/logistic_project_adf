@@ -1,0 +1,102 @@
+{
+	"name": "PL_data_transfermation",
+	"properties": {
+		"activities": [
+			{
+				"name": "bronze_notebook",
+				"type": "DatabricksNotebook",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/Users/biswajit@barsanapattanayakgmail.onmicrosoft.com/logistic_project_2026/bronze_notebooks/bronze_notebook",
+					"baseParameters": {
+						"masterPipelineRunID": {
+							"value": "@pipeline().RunId",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_logistic_project_adb",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "silver_notebook",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "bronze_notebook",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/Users/biswajit@barsanapattanayakgmail.onmicrosoft.com/logistic_project_2026/silver_notebooks/silver_notebook",
+					"baseParameters": {
+						"masterPipelineRunID": {
+							"value": "@pipeline().RunId",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_logistic_project_adb",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "gold_notebook",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "silver_notebook",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/Users/biswajit@barsanapattanayakgmail.onmicrosoft.com/logistic_project_2026/gold_notebooks/gold_notebook",
+					"baseParameters": {
+						"masterPipelineRunID": {
+							"value": "@pipeline().RunId",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_logistic_project_adb",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2026-07-27T07:20:23Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

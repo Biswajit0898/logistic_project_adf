@@ -1,5 +1,6 @@
 {
 	"name": "logistic_project_key_vault_LS",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
 	"properties": {
 		"annotations": [],
 		"type": "AzureKeyVault",
