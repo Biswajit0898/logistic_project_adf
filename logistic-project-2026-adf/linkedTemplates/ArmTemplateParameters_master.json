@@ -11,6 +11,15 @@
 		"logistic_project_adls_LS_accountKey": {
 			"value": ""
 		},
+		"LS_SQL_Pipelin_Status_properties_typeProperties_server": {
+			"value": "logistic-project-db-server.database.windows.net"
+		},
+		"LS_SQL_Pipelin_Status_properties_typeProperties_database": {
+			"value": "logistic_project_2026_db"
+		},
+		"LS_SQL_Pipelin_Status_properties_typeProperties_userName": {
+			"value": "biswa"
+		},
 		"LS_logistic_project_adb_properties_typeProperties_existingClusterId": {
 			"value": "0723-101212-7uierkpe"
 		},
