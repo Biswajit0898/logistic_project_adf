@@ -50,14 +50,7 @@
 						{
 							"name": "Copy_file_from_adls",
 							"type": "Copy",
-							"dependsOn": [
-								{
-									"activity": "set_is_processed_false_adls",
-									"dependencyConditions": [
-										"Succeeded"
-									]
-								}
-							],
+							"dependsOn": [],
 							"policy": {
 								"timeout": "0.12:00:00",
 								"retry": 0,
@@ -100,6 +93,7 @@
 									}
 								},
 								"enableStaging": false,
+								"enableSkipIncompatibleRow": false,
 								"translator": {
 									"type": "TabularTranslator",
 									"typeConversion": true,
@@ -147,37 +141,8 @@
 							]
 						},
 						{
-							"name": "set_is_processed_false_adls",
-							"type": "Script",
-							"dependsOn": [],
-							"policy": {
-								"timeout": "0.12:00:00",
-								"retry": 0,
-								"retryIntervalInSeconds": 30,
-								"secureOutput": false,
-								"secureInput": false
-							},
-							"userProperties": [],
-							"linkedServiceName": {
-								"referenceName": "logistic_config_LS",
-								"type": "LinkedServiceReference"
-							},
-							"typeProperties": {
-								"scripts": [
-									{
-										"type": "Query",
-										"text": {
-											"value": "UPDATE metadata.ingestion_configuration SET is_processed = 0 WHERE id = @{item().id}",
-											"type": "Expression"
-										}
-									}
-								],
-								"scriptBlockExecutionTimeout": "02:00:00"
-							}
-						},
-						{
-							"name": "set_is_processed_true_adls",
-							"type": "Script",
+							"name": "Audit_copy_adls_on_success",
+							"type": "SqlServerStoredProcedure",
 							"dependsOn": [
 								{
 									"activity": "Copy_file_from_adls",
@@ -194,21 +159,208 @@
 								"secureInput": false
 							},
 							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[sp_insert_audit_log]",
+								"storedProcedureParameters": {
+									"adf_name": {
+										"value": {
+											"value": "@pipeline().DataFactory",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"copy_duration_seconds": {
+										"value": {
+											"value": "@activity('Copy_file_from_adls').output.copyDuration",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"end_time": {
+										"value": {
+											"value": "@activity('Copy_file_from_adls').ExecutionEndTime",
+											"type": "Expression"
+										},
+										"type": "DateTime"
+									},
+									"message": {
+										"value": "Successed",
+										"type": "String"
+									},
+									"pipeline_name": {
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pipeline_runid": {
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"rows_read": {
+										"value": {
+											"value": "@activity('Copy_file_from_adls').output.rowsRead",
+											"type": "Expression"
+										},
+										"type": "Int64"
+									},
+									"rows_written": {
+										"value": {
+											"value": "@activity('Copy_file_from_adls').output.rowsCopied ",
+											"type": "Expression"
+										},
+										"type": "Int64"
+									},
+									"sink_filename": {
+										"value": {
+											"value": "@item().target_file_name",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"source_filename": {
+										"value": {
+											"value": "@item().source_file_name",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"start_time": {
+										"value": {
+											"value": "@activity('Copy_file_from_adls').ExecutionStartTime",
+											"type": "Expression"
+										},
+										"type": "DateTime"
+									},
+									"status": {
+										"value": {
+											"value": "@activity('Copy_file_from_adls').status",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
 							"linkedServiceName": {
 								"referenceName": "logistic_config_LS",
 								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Audit_copy_adls_on_fail",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Copy_file_from_adls",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
 							},
+							"userProperties": [],
 							"typeProperties": {
-								"scripts": [
-									{
-										"type": "Query",
-										"text": {
-											"value": "UPDATE metadata.ingestion_configuration SET is_processed = 1 WHERE id = @{item().id}",
+								"storedProcedureName": "[dbo].[sp_insert_audit_log]",
+								"storedProcedureParameters": {
+									"adf_name": {
+										"value": {
+											"value": "@pipeline().DataFactory",
 											"type": "Expression"
-										}
+										},
+										"type": "String"
+									},
+									"copy_duration_seconds": {
+										"value": {
+											"value": "@activity('Copy_file_from_adls').output.copyDuration",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"end_time": {
+										"value": {
+											"value": "@activity('Copy_file_from_adls').ExecutionEndTime",
+											"type": "Expression"
+										},
+										"type": "DateTime"
+									},
+									"message": {
+										"value": {
+											"value": "@activity('Copy_file_from_adls').output.erroe[0].message",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pipeline_name": {
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pipeline_runid": {
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"rows_read": {
+										"value": {
+											"value": "@activity('Copy_file_from_adls').output.rowsRead",
+											"type": "Expression"
+										},
+										"type": "Int64"
+									},
+									"rows_written": {
+										"value": {
+											"value": "@activity('Copy_file_from_adls').output.rowsCopied ",
+											"type": "Expression"
+										},
+										"type": "Int64"
+									},
+									"sink_filename": {
+										"value": {
+											"value": "@item().target_file_name",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"source_filename": {
+										"value": {
+											"value": "@item().source_file_name",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"start_time": {
+										"value": {
+											"value": "@activity('Copy_file_from_adls').ExecutionStartTime",
+											"type": "Expression"
+										},
+										"type": "DateTime"
+									},
+									"status": {
+										"value": {
+											"value": "@activity('Copy_file_from_adls').status",
+											"type": "Expression"
+										},
+										"type": "String"
 									}
-								],
-								"scriptBlockExecutionTimeout": "02:00:00"
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "logistic_config_LS",
+								"type": "LinkedServiceReference"
 							}
 						}
 					]
@@ -221,7 +373,7 @@
 			}
 		},
 		"annotations": [],
-		"lastPublishTime": "2026-07-27T19:56:44Z"
+		"lastPublishTime": "2026-08-02T19:57:39Z"
 	},
 	"type": "Microsoft.DataFactory/factories/pipelines"
 }

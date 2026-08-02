@@ -1,0 +1,17 @@
+{
+	"name": "DS_PipelineStatus",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_SQL_Pipelin_Status",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "metadata",
+			"table": "PipelineStatus"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

@@ -1,0 +1,254 @@
+{
+	"name": "PL_logistic_main",
+	"properties": {
+		"activities": [
+			{
+				"name": "Until_Previous_run_completed",
+				"type": "Until",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(activity('Look_pipeline_status').output.firstRow.IsRun,false)",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Look_pipeline_status",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderQuery": {
+										"value": "SELECT IsRun FROM metadata.PipelineStatus WHERE PipelineName = '@{pipeline().Pipeline}' AND IsActive = 1;",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "DS_PipelineStatus",
+									"type": "DatasetReference"
+								}
+							}
+						},
+						{
+							"name": "Wait_15min",
+							"type": "Wait",
+							"dependsOn": [
+								{
+									"activity": "Look_pipeline_status",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"waitTimeInSeconds": 10
+							}
+						}
+					],
+					"timeout": "0.12:00:00"
+				}
+			},
+			{
+				"name": "Execute _PL_data_ingestion",
+				"type": "ExecutePipeline",
+				"state": "Inactive",
+				"onInactiveMarkAs": "Succeeded",
+				"dependsOn": [
+					{
+						"activity": "Update_IsRun",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "PL_data_ingestion",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "Execute_PL_data_transfermation",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Execute _PL_data_ingestion",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "PL_data_transfermation",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "Update_IsRun",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "Until_Previous_run_completed",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "LS_SQL_Pipelin_Status",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "NonQuery",
+							"text": {
+								"value": "UPDATE metadata.PipelineStatus SET IsRun = 1 WHERE PipelineName = '@{pipeline().Pipeline}';",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Update_Pipeline_status_table_on_sucess",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "Execute_PL_data_transfermation",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "LS_SQL_Pipelin_Status",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "NonQuery",
+							"text": {
+								"value": "UPDATE metadata.PipelineStatus\nSET\n    IsRun = 0,\n    Status = 'Succeeded',\n    StartTime = '@{pipeline().TriggerTime}',\n    EndTime = '@{utcNow()}',\n    RunDuration = DATEDIFF(\n        SECOND,\n        '@{pipeline().TriggerTime}',\n        '@{utcNow()}'\n    )\nWHERE PipelineName = '@{pipeline().Pipeline}';",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Update_Pipeline_status_table_on_fail",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "Execute_PL_data_transfermation",
+						"dependencyConditions": [
+							"Failed",
+							"Skipped"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "LS_SQL_Pipelin_Status",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "NonQuery",
+							"text": {
+								"value": "UPDATE metadata.PipelineStatus\nSET\n    IsRun = 0,\n    Status = 'Faileded',\n    StartTime = '@{pipeline().TriggerTime}',\n    EndTime = '@{utcNow()}',\n    RunDuration = DATEDIFF(\n        SECOND,\n        '@{pipeline().TriggerTime}',\n        '@{utcNow()}'\n    )\nWHERE PipelineName = '@{pipeline().Pipeline}';",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Pipeline_fail_alert",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Execute_PL_data_transfermation",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"url": "https://prod-05.northcentralus.logic.azure.com:443/workflows/3c57d12cb02a42a0bea7001f40a1f161/triggers/When_an_HTTP_request_is_received/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2FWhen_an_HTTP_request_is_received%2Frun&sv=1.0&sig=cdrqqwjYJRJoSm5ef8S7k4K6CHCUwxLacCGU5L7Ol2o",
+					"body": {
+						"value": "{\n\"PipelineName\":\"@{pipeline().Pipeline}\",\n\"DataFactoryName\":\"@{pipeline().DataFactory}\",\n\"RunIDs\":\"@{pipeline().RunId}\",\n\"ErrorMessage\": \"@{pipeline().Pipeline} Failed\"\n}\n",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2026-08-02T19:57:39Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}
